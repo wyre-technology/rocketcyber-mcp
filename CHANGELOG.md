@@ -19,6 +19,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Gateway authentication mode (`AUTH_MODE=gateway`) for hosted deployment behind the MCP Gateway
+- Per-request credential extraction from `X-RocketCyber-API-Key` and `X-RocketCyber-Region` HTTP headers
+- `parseCredentialsFromHeaders()` utility for header-based credential parsing
+- `updateCredentials()` method on `RocketCyberService` for runtime credential swapping
+- Dockerfile with multi-stage build (node:22-alpine) for containerized deployment
+- Docker job in CI workflow to build and push to GHCR (`ghcr.io/wyre-technology/rocketcyber-mcp`)
+- Health check endpoint now reports `authMode` in gateway mode
+
 ## [1.0.0] - 2026-02-23
 
 ### Added

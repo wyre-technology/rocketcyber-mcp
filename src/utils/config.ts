@@ -2,6 +2,18 @@ import { McpServerConfig } from '../types/mcp.js';
 import { LogLevel } from './logger.js';
 
 export type TransportType = 'stdio' | 'http';
+export type AuthMode = 'env' | 'gateway';
+
+/**
+ * Gateway credentials extracted from HTTP request headers.
+ * The MCP Gateway injects credentials via these headers:
+ * - X-RocketCyber-API-Key: Contains the RocketCyber API key
+ * - X-RocketCyber-Region: Contains the RocketCyber region (us or eu)
+ */
+export interface GatewayCredentials {
+  apiKey: string | undefined;
+  region: string | undefined;
+}
 
 export interface EnvironmentConfig {
   rocketcyber: {
@@ -21,6 +33,27 @@ export interface EnvironmentConfig {
     level: LogLevel;
     format: 'json' | 'simple';
   };
+  auth: {
+    mode: AuthMode;
+  };
+}
+
+/**
+ * Parse credentials from HTTP request headers (for per-request credential handling).
+ * Header names follow HTTP convention (lowercase with hyphens).
+ */
+export function parseCredentialsFromHeaders(
+  headers: Record<string, string | string[] | undefined>
+): GatewayCredentials {
+  const getHeader = (name: string): string | undefined => {
+    const value = headers[name] || headers[name.toLowerCase()];
+    return Array.isArray(value) ? value[0] : value;
+  };
+
+  return {
+    apiKey: getHeader('x-rocketcyber-api-key'),
+    region: getHeader('x-rocketcyber-region'),
+  };
 }
 
 export function loadEnvironmentConfig(): EnvironmentConfig {
@@ -28,6 +61,8 @@ export function loadEnvironmentConfig(): EnvironmentConfig {
   if (transportType !== 'stdio' && transportType !== 'http') {
     throw new Error(`Invalid MCP_TRANSPORT value: "${transportType}". Must be "stdio" or "http".`);
   }
+
+  const authMode = (process.env.AUTH_MODE as AuthMode) || 'env';
 
   return {
     rocketcyber: {
@@ -46,6 +81,9 @@ export function loadEnvironmentConfig(): EnvironmentConfig {
     logging: {
       level: (process.env.LOG_LEVEL as LogLevel) || 'info',
       format: (process.env.LOG_FORMAT as 'json' | 'simple') || 'simple'
+    },
+    auth: {
+      mode: authMode
     }
   };
 }

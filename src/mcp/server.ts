@@ -16,7 +16,7 @@ import {
 import { RocketCyberService } from '../services/rocketcyber.service.js';
 import { Logger } from '../utils/logger.js';
 import { McpServerConfig } from '../types/mcp.js';
-import { EnvironmentConfig } from '../utils/config.js';
+import { EnvironmentConfig, parseCredentialsFromHeaders, GatewayCredentials } from '../utils/config.js';
 import { RocketCyberResourceHandler } from '../handlers/resource.handler.js';
 import { RocketCyberToolHandler } from '../handlers/tool.handler.js';
 
@@ -117,9 +117,14 @@ export class RocketCyberMcpServer {
     this.logger.info('RocketCyber MCP Server connected to stdio transport');
   }
 
+  /**
+   * Start with HTTP Streamable transport.
+   * In gateway mode, credentials are extracted from request headers on each request.
+   */
   private async startHttpTransport(): Promise<void> {
     const port = this.envConfig?.transport?.port || 8080;
     const host = this.envConfig?.transport?.host || '0.0.0.0';
+    const isGatewayMode = this.envConfig?.auth?.mode === 'gateway';
 
     this.httpTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
@@ -129,17 +134,42 @@ export class RocketCyberMcpServer {
     this.httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
+      // Health endpoint - no auth required
       if (url.pathname === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok', transport: 'http', timestamp: new Date().toISOString() }));
+        res.end(JSON.stringify({
+          status: 'ok',
+          transport: 'http',
+          authMode: isGatewayMode ? 'gateway' : 'env',
+          timestamp: new Date().toISOString()
+        }));
         return;
       }
 
+      // MCP endpoint
       if (url.pathname === '/mcp') {
+        // In gateway mode, extract credentials from headers
+        if (isGatewayMode) {
+          const credentials = this.extractGatewayCredentials(req);
+          if (!credentials.apiKey) {
+            this.logger.warn('Gateway mode: Missing required API key in headers');
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              error: 'Missing credentials',
+              message: 'Gateway mode requires X-RocketCyber-API-Key header',
+              required: ['X-RocketCyber-API-Key']
+            }));
+            return;
+          }
+          // Update service credentials for this request
+          this.updateCredentials(credentials);
+        }
+
         this.httpTransport!.handleRequest(req, res);
         return;
       }
 
+      // 404 for everything else
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Not found', endpoints: ['/mcp', '/health'] }));
     });
@@ -150,9 +180,28 @@ export class RocketCyberMcpServer {
       this.httpServer!.listen(port, host, () => {
         this.logger.info(`RocketCyber MCP Server listening on http://${host}:${port}/mcp`);
         this.logger.info(`Health check available at http://${host}:${port}/health`);
+        this.logger.info(`Authentication mode: ${isGatewayMode ? 'gateway (header-based)' : 'env (environment variables)'}`);
         resolve();
       });
     });
+  }
+
+  /**
+   * Extract credentials from gateway-injected HTTP headers.
+   */
+  private extractGatewayCredentials(req: IncomingMessage): GatewayCredentials {
+    const headers = req.headers as Record<string, string | string[] | undefined>;
+    return parseCredentialsFromHeaders(headers);
+  }
+
+  /**
+   * Update the RocketCyber service with new credentials.
+   * Used in gateway mode where credentials come from request headers.
+   */
+  private updateCredentials(credentials: GatewayCredentials): void {
+    if (credentials.apiKey) {
+      this.rcService.updateCredentials(credentials.apiKey, credentials.region);
+    }
   }
 
   async stop(): Promise<void> {

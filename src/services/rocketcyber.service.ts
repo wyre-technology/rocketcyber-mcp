@@ -89,6 +89,21 @@ export class RocketCyberService {
     return client.office.get(params);
   }
 
+  /**
+   * Reinitialize the client with new credentials.
+   * Used in gateway mode where credentials come from request headers.
+   */
+  updateCredentials(apiKey: string, region?: string): void {
+    this.config = {
+      ...this.config,
+      rocketcyber: { apiKey, region: region || 'us' }
+    };
+    // Force re-initialization on next call
+    this.client = null;
+    this.initializationPromise = null;
+    this.logger.debug('RocketCyber credentials updated from gateway headers');
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       await this.getAccount();
