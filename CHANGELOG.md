@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.0.0...v1.1.0) (2026-02-24)
+
+
+### Features
+
+* add gateway auth mode and Dockerfile for hosted deployment ([0f57851](https://github.com/wyre-technology/rocketcyber-mcp/commit/0f578518224fea7caf290de56ced39657e93eb43))
+
 # 1.0.0 (2026-02-24)
 
 
