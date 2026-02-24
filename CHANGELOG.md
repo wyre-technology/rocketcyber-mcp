@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.0...v1.1.1) (2026-02-24)
+
+
+### Bug Fixes
+
+* **ci:** add Setup Node step to Docker job for version extraction ([18666e2](https://github.com/wyre-technology/rocketcyber-mcp/commit/18666e2afb2ac3a692e0f95e9f3eaaea5d6ec0ea))
+
 # [1.1.0](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.0.0...v1.1.0) (2026-02-24)
 
 
