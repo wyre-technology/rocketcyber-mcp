@@ -1,3 +1,17 @@
+# 1.0.0 (2026-02-24)
+
+
+### Bug Fixes
+
+* add .gitignore and remove node_modules/dist from tracking ([e3d52be](https://github.com/wyre-technology/rocketcyber-mcp/commit/e3d52be9788cd6d10a8bd5977d5477d50772af4f))
+* add semantic-release branch configuration ([d7912f4](https://github.com/wyre-technology/rocketcyber-mcp/commit/d7912f48796dce8ca7f5db5e4d6cf770075c5ebe))
+
+
+### Features
+
+* initial rocketcyber-mcp server with 10 read-only tools ([59b4968](https://github.com/wyre-technology/rocketcyber-mcp/commit/59b49682c2d2085f2e78ed6f9153ade572960171))
+* pass through region config to SDK ([15d96e7](https://github.com/wyre-technology/rocketcyber-mcp/commit/15d96e719103d8e700632314637d9b8b62ce3fbc))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
