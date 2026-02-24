@@ -39,7 +39,7 @@ export class RocketCyberService {
     this.logger.info('Initializing RocketCyber client...');
     this.client = new RocketCyberClient({
       apiKey,
-      region: 'us'
+      region: (region || 'us') as any
     });
     this.logger.info('RocketCyber client initialized successfully');
   }
