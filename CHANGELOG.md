@@ -1,3 +1,10 @@
+## [1.1.6](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.5...v1.1.6) (2026-02-24)
+
+
+### Bug Fixes
+
+* **deps:** update node-rocketcyber SDK to fix response body double-read ([51d31b8](https://github.com/wyre-technology/rocketcyber-mcp/commit/51d31b84a50d2e03ff7b2e74911729f433b05f34))
+
 ## [1.1.5](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.4...v1.1.5) (2026-02-24)
 
 
