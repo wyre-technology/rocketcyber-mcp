@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.1...v1.1.2) (2026-02-24)
+
+
+### Performance Improvements
+
+* **docker:** remove npm upgrade to speed up multi-platform builds ([7b83e69](https://github.com/wyre-technology/rocketcyber-mcp/commit/7b83e69f67eb071f8888fc65512aa3a1fba6a967))
+
 ## [1.1.1](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.0...v1.1.1) (2026-02-24)
 
 
