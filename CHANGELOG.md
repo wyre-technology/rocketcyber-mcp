@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.3...v1.1.4) (2026-02-24)
+
+
+### Bug Fixes
+
+* use stateless HTTP transport for multi-client gateway support ([46ecd27](https://github.com/wyre-technology/rocketcyber-mcp/commit/46ecd271545fd577af56f2699eca799af8902d5e))
+
 ## [1.1.3](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.2...v1.1.3) (2026-02-24)
 
 
