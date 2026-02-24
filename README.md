@@ -11,6 +11,12 @@ MCP (Model Context Protocol) server for the [RocketCyber](https://www.rocketcybe
 - Winston logger with all output routed to stderr
 - Connection test tool for validating credentials
 
+## One-Click Deployment
+
+[![Deploy to DO](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/wyre-technology/rocketcyber-mcp/tree/main)
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/wyre-technology/rocketcyber-mcp)
+
 ## Installation
 
 ```bash
