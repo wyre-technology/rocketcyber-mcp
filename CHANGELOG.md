@@ -1,3 +1,10 @@
+## [1.1.5](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.4...v1.1.5) (2026-02-24)
+
+
+### Bug Fixes
+
+* use per-request Server+Transport for stateless HTTP mode ([03e1b35](https://github.com/wyre-technology/rocketcyber-mcp/commit/03e1b352fdb2342fb6ffc95e2d6b33bf7a1d0ea9))
+
 ## [1.1.4](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.3...v1.1.4) (2026-02-24)
 
 
