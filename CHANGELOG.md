@@ -1,3 +1,10 @@
+## [1.1.7](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.6...v1.1.7) (2026-02-26)
+
+
+### Bug Fixes
+
+* **ci:** remove unused discord-release.yml ([3eb3eb3](https://github.com/wyre-technology/rocketcyber-mcp/commit/3eb3eb34505546f86e1bc7e24db88b13ecde7acc))
+
 ## [1.1.6](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.5...v1.1.6) (2026-02-24)
 
 
