@@ -45,8 +45,14 @@ export class RocketCyberMcpServer {
   /**
    * Create a fresh MCP Server with all handlers registered.
    * Called per-request in HTTP mode so each request gets a clean server.
+   *
+   * In gateway mode, per-request handlers are passed so each request is fully
+   * isolated — no shared mutable state between concurrent requests.
    */
-  private createFreshServer(): Server {
+  private createFreshServer(
+    perRequestToolHandler?: RocketCyberToolHandler,
+    perRequestResourceHandler?: RocketCyberResourceHandler,
+  ): Server {
     const server = new Server(
       { name: this.config.name, version: this.config.version },
       {
@@ -61,16 +67,46 @@ export class RocketCyberMcpServer {
     server.onerror = (error) => this.logger.error('MCP Server error:', error);
     server.oninitialized = () => this.logger.info('MCP Server initialized and ready');
 
-    this.setupHandlers(server);
+    this.setupHandlers(
+      server,
+      perRequestToolHandler ?? this.toolHandler,
+      perRequestResourceHandler ?? this.resourceHandler,
+    );
     return server;
   }
 
-  private setupHandlers(server: Server): void {
+  /**
+   * Build per-request service + handlers from gateway credentials.
+   * Returns fully isolated instances that won't be affected by concurrent requests.
+   */
+  private buildPerRequestHandlers(credentials: GatewayCredentials): {
+    toolHandler: RocketCyberToolHandler;
+    resourceHandler: RocketCyberResourceHandler;
+  } {
+    const requestConfig: McpServerConfig = {
+      ...this.config,
+      rocketcyber: {
+        apiKey: credentials.apiKey,
+        region: credentials.region ?? this.config.rocketcyber?.region,
+      },
+    };
+    const service = new RocketCyberService(requestConfig, this.logger);
+    return {
+      resourceHandler: new RocketCyberResourceHandler(service, this.logger),
+      toolHandler: new RocketCyberToolHandler(service, this.logger),
+    };
+  }
+
+  private setupHandlers(
+    server: Server,
+    toolHandler: RocketCyberToolHandler,
+    resourceHandler: RocketCyberResourceHandler,
+  ): void {
     this.logger.info('Setting up MCP request handlers...');
 
     server.setRequestHandler(ListResourcesRequestSchema, async () => {
       try {
-        const resources = await this.resourceHandler.listResources();
+        const resources = await resourceHandler.listResources();
         return { resources };
       } catch (error) {
         this.logger.error('Failed to list resources:', error);
@@ -80,7 +116,7 @@ export class RocketCyberMcpServer {
 
     server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       try {
-        const content = await this.resourceHandler.readResource(request.params.uri);
+        const content = await resourceHandler.readResource(request.params.uri);
         return { contents: [content] };
       } catch (error) {
         this.logger.error(`Failed to read resource ${request.params.uri}:`, error);
@@ -90,7 +126,7 @@ export class RocketCyberMcpServer {
 
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       try {
-        const tools = await this.toolHandler.listTools();
+        const tools = await toolHandler.listTools();
         return { tools };
       } catch (error) {
         this.logger.error('Failed to list tools:', error);
@@ -100,7 +136,7 @@ export class RocketCyberMcpServer {
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
-        const result = await this.toolHandler.callTool(request.params.name, request.params.arguments || {});
+        const result = await toolHandler.callTool(request.params.name, request.params.arguments || {});
         return { content: result.content, isError: result.isError };
       } catch (error) {
         this.logger.error(`Failed to call tool ${request.params.name}:`, error);
@@ -166,7 +202,12 @@ export class RocketCyberMcpServer {
           return;
         }
 
-        // In gateway mode, extract credentials from headers
+        // In gateway mode, build per-request service + handlers from the
+        // injected credential headers. Each request gets its own isolated
+        // RocketCyberService so concurrent requests for different tenants
+        // never interfere with each other.
+        let perRequestToolHandler: RocketCyberToolHandler | undefined;
+        let perRequestResourceHandler: RocketCyberResourceHandler | undefined;
         if (isGatewayMode) {
           const credentials = this.extractGatewayCredentials(req);
           if (!credentials.apiKey) {
@@ -179,12 +220,13 @@ export class RocketCyberMcpServer {
             }));
             return;
           }
-          // Update service credentials for this request
-          this.updateCredentials(credentials);
+          const handlers = this.buildPerRequestHandlers(credentials);
+          perRequestToolHandler = handlers.toolHandler;
+          perRequestResourceHandler = handlers.resourceHandler;
         }
 
         // Stateless: create fresh server + transport for each request
-        const server = this.createFreshServer();
+        const server = this.createFreshServer(perRequestToolHandler, perRequestResourceHandler);
         const transport = new StreamableHTTPServerTransport({
           enableJsonResponse: true,
         });
@@ -229,12 +271,6 @@ export class RocketCyberMcpServer {
   private extractGatewayCredentials(req: IncomingMessage): GatewayCredentials {
     const headers = req.headers as Record<string, string | string[] | undefined>;
     return parseCredentialsFromHeaders(headers);
-  }
-
-  private updateCredentials(credentials: GatewayCredentials): void {
-    if (credentials.apiKey) {
-      this.rcService.updateCredentials(credentials.apiKey, credentials.region);
-    }
   }
 
   async stop(): Promise<void> {
