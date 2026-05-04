@@ -29,7 +29,8 @@ export class RocketCyberToolHandler {
     return new Map<string, H>([
       ['rocketcyber_test_connection', async () => {
         const ok = await s.testConnection();
-        return { result: { success: ok }, message: ok ? 'Successfully connected to RocketCyber API' : 'Connection failed' };
+        if (!ok) throw new Error('Connection failed: check ROCKETCYBER_API_KEY');
+        return { result: { success: true }, message: 'Successfully connected to RocketCyber API' };
       }],
       ['rocketcyber_get_account', async (a) => {
         const r = await s.getAccount(a.accountId ? { accountId: a.accountId } : undefined);
