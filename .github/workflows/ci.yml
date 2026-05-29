@@ -41,6 +41,9 @@ jobs:
     permissions:
       contents: write
       issues: write
+    outputs:
+      version: ${{ steps.release-version.outputs.version }}
+      released: ${{ steps.release-version.outputs.released }}
 
     steps:
       - name: Checkout
@@ -63,10 +66,26 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Capture pre-release version
+        run: |
+          PRE_VERSION=$(node -p "require('./package.json').version")
+          echo "PRE_VERSION=$PRE_VERSION" >> "$GITHUB_ENV"
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx semantic-release
+
+      - name: Get released version
+        id: release-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$VERSION" != "$PRE_VERSION" ]; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
 
   docker:
     name: Build and Push Docker Image
