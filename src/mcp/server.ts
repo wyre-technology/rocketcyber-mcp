@@ -97,6 +97,24 @@ export class RocketCyberMcpServer {
     };
   }
 
+  /**
+   * Build a fresh, fully-configured MCP `Server` for a single request.
+   *
+   * This is the transport-agnostic seam reused by the Cloudflare Workers
+   * entrypoint (`worker.ts`): the Worker owns its own Web Standard transport
+   * and only needs a ready-to-connect `Server`. When `credentials` are
+   * provided (gateway mode), per-request isolated handlers are built from them;
+   * otherwise the instance's env-configured handlers are used.
+   */
+  public createServerForRequest(credentials?: GatewayCredentials): Server {
+    if (credentials?.apiKey) {
+      const { toolHandler, resourceHandler } =
+        this.buildPerRequestHandlers(credentials);
+      return this.createFreshServer(toolHandler, resourceHandler);
+    }
+    return this.createFreshServer();
+  }
+
   private setupHandlers(
     server: Server,
     toolHandler: RocketCyberToolHandler,

@@ -5,22 +5,22 @@ FROM node:22-alpine AS builder
 ARG VERSION="unknown"
 ARG COMMIT_SHA="unknown"
 ARG BUILD_DATE="unknown"
-ARG NODE_AUTH_TOKEN
+ARG GITHUB_TOKEN
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files and .npmrc for GitHub Packages auth
-COPY package*.json .npmrc ./
+# Copy package files
+COPY package*.json ./
 
-# Configure registry auth for GitHub Packages (needed to pull @wyre-technology/* deps)
-RUN echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc
-
-# Install dependencies (--ignore-scripts prevents 'prepare' from running before source is copied)
-RUN npm ci --ignore-scripts
-
-# Remove auth token from .npmrc after install
-RUN sed -i '/_authToken/d' .npmrc
+# GitHub Packages auth for @wyre-technology scoped packages. Operators supply a
+# GitHub PAT (read:packages) as the GITHUB_TOKEN build arg; the temp .npmrc is
+# removed after install so the token never lands in an image layer.
+# (--ignore-scripts prevents 'prepare' from running before source is copied)
+RUN echo "@wyre-technology:registry=https://npm.pkg.github.com" > .npmrc && \
+    echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc && \
+    npm ci --ignore-scripts && \
+    rm -f .npmrc
 
 # Copy source code
 COPY . .

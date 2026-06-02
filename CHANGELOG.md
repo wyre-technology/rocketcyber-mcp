@@ -1,3 +1,22 @@
+## [Unreleased]
+
+### Fixed
+
+- One-click cloud deploys (Cloudflare Workers, DigitalOcean) no longer fail with
+  `npm error 401 Unauthorized` from `npm.pkg.github.com`. The `.npmrc` now carries the
+  GitHub Packages auth-token line (`${NODE_AUTH_TOKEN}`) and the Dockerfile writes a
+  temporary authenticated `.npmrc` from the `GITHUB_TOKEN` build arg before `npm ci`,
+  so operators can supply their own `read:packages` PAT as a build variable.
+
+### Changed
+
+- README documents creating a `read:packages` PAT and setting `NODE_AUTH_TOKEN`
+  (Cloudflare) / build-time `GITHUB_TOKEN` (DigitalOcean) before deploying or installing.
+- **npm package:** the package is now scoped to `@wyre-technology/rocketcyber-mcp` and is
+  published to the **GitHub Packages** npm registry (`https://npm.pkg.github.com`) on each
+  release. The previous unscoped name (`rocketcyber-mcp`) was never published. The
+  `rocketcyber-mcp` CLI/bin command name is unchanged.
+
 ## [1.1.7](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.6...v1.1.7) (2026-02-26)
 
 
