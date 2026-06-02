@@ -139,7 +139,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/wyre-technology/rocketcyber-mcp:latest
-            ghcr.io/wyre-technology/rocketcyber-mcp:${{ steps.version.outputs.version }}
+            ghcr.io/wyre-technology/rocketcyber-mcp:v${{ steps.version.outputs.version }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             COMMIT_SHA=${{ github.sha }}
