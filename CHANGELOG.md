@@ -12,6 +12,10 @@
 
 - README documents creating a `read:packages` PAT and setting `NODE_AUTH_TOKEN`
   (Cloudflare) / build-time `GITHUB_TOKEN` (DigitalOcean) before deploying or installing.
+- **npm package:** the package is now scoped to `@wyre-technology/rocketcyber-mcp` and is
+  published to the **GitHub Packages** npm registry (`https://npm.pkg.github.com`) on each
+  release. The previous unscoped name (`rocketcyber-mcp`) was never published. The
+  `rocketcyber-mcp` CLI/bin command name is unchanged.
 
 ## [1.1.7](https://github.com/wyre-technology/rocketcyber-mcp/compare/v1.1.6...v1.1.7) (2026-02-26)
 
