@@ -9,6 +9,25 @@ export interface McpToolResult {
   isError?: boolean;
 }
 
+// Incident free-text fields can run to several KB each; a 20-incident page is
+// ~64K characters and breaks client rendering. Compact (default) responses
+// truncate them; `verbose: true` returns the full text.
+const INCIDENT_FREE_TEXT_FIELDS = ['description', 'remediation'];
+const COMPACT_MAX_CHARS = 300;
+const TRUNCATION_SUFFIX = '… [truncated — pass verbose: true for full text]';
+
+function compactIncident(incident: Record<string, any>): Record<string, any> {
+  const compact = { ...incident };
+  for (const field of INCIDENT_FREE_TEXT_FIELDS) {
+    const value = compact[field];
+    if (typeof value !== 'string' || value.length <= COMPACT_MAX_CHARS) continue;
+    const cut = value.slice(0, COMPACT_MAX_CHARS);
+    const lastSpace = cut.lastIndexOf(' ');
+    compact[field] = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut) + TRUNCATION_SUFFIX;
+  }
+  return compact;
+}
+
 export class RocketCyberToolHandler {
   private service: RocketCyberService;
   private logger: Logger;
@@ -41,7 +60,11 @@ export class RocketCyberToolHandler {
         return { result: r, message: `Retrieved agents (${r.data?.length || 0} results, page ${r.currentPage || 1} of ${r.totalPages || 1})` };
       }],
       ['rocketcyber_list_incidents', async (a) => {
-        const r = await s.listIncidents(a);
+        const { verbose, ...params } = a;
+        let r = await s.listIncidents(params);
+        if (!verbose && Array.isArray(r?.data)) {
+          r = { ...r, data: r.data.map(compactIncident) };
+        }
         return { result: r, message: `Retrieved incidents (${r.data?.length || 0} results, page ${r.currentPage || 1} of ${r.totalPages || 1})` };
       }],
       ['rocketcyber_list_events', async (a) => {

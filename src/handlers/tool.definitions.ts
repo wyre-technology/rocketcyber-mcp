@@ -45,7 +45,7 @@ export const TOOL_DEFINITIONS: McpTool[] = [
   },
   {
     name: 'rocketcyber_list_incidents',
-    description: 'List security incidents in RocketCyber',
+    description: 'List security incidents in RocketCyber. By default, long free-text fields (description, remediation) are truncated to ~300 characters to keep responses small; pass verbose: true for the full text.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -56,7 +56,8 @@ export const TOOL_DEFINITIONS: McpTool[] = [
         status: { type: 'string', description: 'Filter by status' },
         dates: { type: 'string', description: 'Date range filter' },
         severity: { type: 'string', description: 'Filter by severity' },
-        title: { type: 'string', description: 'Filter by title' }
+        title: { type: 'string', description: 'Filter by title' },
+        verbose: { type: 'boolean', description: 'Return full untruncated description/remediation text (default false: truncated to ~300 characters)' }
       },
       required: []
     }
