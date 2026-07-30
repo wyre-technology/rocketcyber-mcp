@@ -28,6 +28,56 @@ function compactIncident(incident: Record<string, any>): Record<string, any> {
   return compact;
 }
 
+// Per-incident compaction can't bound TOTAL size when the record count is
+// unbounded (pageSize can be 100+). Compact responses additionally cap the
+// serialized response text — exactly as callTool emits it — by keeping only a
+// leading prefix of the incident list. Pagination metadata stays truthful
+// about the server page; the message says how many incidents are shown.
+export const MAX_COMPACT_RESPONSE_CHARS = 40_000;
+
+/** Serialized size of the response exactly as callTool emits it. */
+function serializedSize(message: string, result: unknown): number {
+  return JSON.stringify({ message, data: result }).length;
+}
+
+function truncationMessage(shown: number, fetched: number, result: Record<string, any>): string {
+  return `Retrieved incidents (showing ${shown} of ${fetched} fetched on page ` +
+    `${result.currentPage || 1} of ${result.totalPages || 1}; ` +
+    `response size cap — lower pageSize and use page to paginate)`;
+}
+
+/**
+ * If the serialized response would exceed MAX_COMPACT_RESPONSE_CHARS, keep
+ * the largest leading prefix of `result.data` that fits (always at least one
+ * incident). Linear accumulation: each incident is serialized once.
+ */
+function applyResponseBudget(
+  result: Record<string, any>,
+  message: string
+): { result: Record<string, any>; message: string } {
+  const incidents = result.data as Record<string, any>[];
+  if (incidents.length === 0 || serializedSize(message, result) <= MAX_COMPACT_RESPONSE_CHARS) {
+    return { result, message };
+  }
+
+  const fetched = incidents.length;
+  // Size with k incidents = size with an empty list + their serialized
+  // lengths + (k - 1) commas.
+  const emptyListSize = (msg: string) => serializedSize(msg, { ...result, data: [] });
+  let kept = 1;
+  let itemsSize = JSON.stringify(incidents[0]).length;
+  for (let k = 2; k <= fetched; k++) {
+    itemsSize += JSON.stringify(incidents[k - 1]).length + 1;
+    if (emptyListSize(truncationMessage(k, fetched, result)) + itemsSize > MAX_COMPACT_RESPONSE_CHARS) break;
+    kept = k;
+  }
+
+  return {
+    result: { ...result, data: incidents.slice(0, kept) },
+    message: truncationMessage(kept, fetched, result),
+  };
+}
+
 export class RocketCyberToolHandler {
   private service: RocketCyberService;
   private logger: Logger;
@@ -62,10 +112,12 @@ export class RocketCyberToolHandler {
       ['rocketcyber_list_incidents', async (a) => {
         const { verbose, ...params } = a;
         let r = await s.listIncidents(params);
+        const message = `Retrieved incidents (${r.data?.length || 0} results, page ${r.currentPage || 1} of ${r.totalPages || 1})`;
         if (!verbose && Array.isArray(r?.data)) {
           r = { ...r, data: r.data.map(compactIncident) };
+          return applyResponseBudget(r, message);
         }
-        return { result: r, message: `Retrieved incidents (${r.data?.length || 0} results, page ${r.currentPage || 1} of ${r.totalPages || 1})` };
+        return { result: r, message };
       }],
       ['rocketcyber_list_events', async (a) => {
         const r = await s.listEvents(a);

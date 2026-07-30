@@ -45,7 +45,7 @@ export const TOOL_DEFINITIONS: McpTool[] = [
   },
   {
     name: 'rocketcyber_list_incidents',
-    description: 'List security incidents in RocketCyber. By default, long free-text fields (description, remediation) are truncated to ~300 characters to keep responses small; pass verbose: true for the full text.',
+    description: 'List security incidents in RocketCyber. By default, long free-text fields (description, remediation) are truncated to ~300 characters, and the total response is capped at ~40,000 characters (a size cap) — if a page does not fit, only the first incidents are returned and the message says how many; use a smaller pageSize with page to paginate through the rest. Pass verbose: true for full untruncated text.',
     inputSchema: {
       type: 'object',
       properties: {
