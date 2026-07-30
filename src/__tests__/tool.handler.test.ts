@@ -142,6 +142,125 @@ describe("rocketcyber_list_incidents tool definition", () => {
   });
 });
 
+// Compact mode caps the TOTAL serialized response (exactly as callTool emits
+// it) by keeping only a leading prefix of the incident list. Per-record
+// truncation alone can't bound total size when the record count is unbounded.
+const RESPONSE_BUDGET = 40_000;
+
+/**
+ * A server page of `count` incidents that is well over the response budget
+ * even after per-incident compaction (~1.2KB each compacted). Ids are all
+ * 3-digit so every serialized incident has an identical length.
+ */
+function bigIncidentsResponse(count: number) {
+  return {
+    data: Array.from({ length: count }, (_, i) => ({
+      id: 100 + i,
+      title: "Suspicious activity detected on monitored endpoint host",
+      description: LONG_DESCRIPTION,
+      remediation: LONG_REMEDIATION,
+      status: "open",
+      severity: "high",
+      accountId: 42,
+      eventCount: 7,
+      affectedDevices: ["WS-01", "WS-02"],
+      createdAt: "2026-07-01T00:00:00Z",
+      details: "x".repeat(400),
+    })),
+    totalCount: 7900,
+    dataCount: count,
+    currentPage: 1,
+    totalPages: 79,
+  };
+}
+
+describe("rocketcyber_list_incidents response byte budget (compact mode)", () => {
+  it("leaves under-budget responses untouched with today's message format", async () => {
+    const { handler } = makeHandler(incidentsResponse());
+    const body = await callListIncidents(handler, {});
+    expect(body.data.data).toHaveLength(2);
+    expect(body.message).toBe("Retrieved incidents (2 results, page 3 of 2)");
+  });
+
+  it("caps the serialized response by keeping only a leading prefix of incidents", async () => {
+    const { handler } = makeHandler(bigIncidentsResponse(100));
+    const result = await handler.callTool("rocketcyber_list_incidents", { pageSize: 100 });
+    expect(result.isError).toBeUndefined();
+    const text = result.content[0].text;
+    expect(text.length).toBeLessThanOrEqual(RESPONSE_BUDGET);
+
+    const body = JSON.parse(text);
+    const shown = body.data.data.length;
+    expect(shown).toBeGreaterThan(0);
+    expect(shown).toBeLessThan(100);
+    // Kept incidents are the FIRST `shown` of the server page, in order.
+    expect(body.data.data.map((i: any) => i.id)).toEqual(
+      Array.from({ length: shown }, (_, i) => 100 + i)
+    );
+    expect(body.message).toBe(
+      `Retrieved incidents (showing ${shown} of 100 fetched on page 1 of 79; ` +
+        `response size cap — lower pageSize and use page to paginate)`
+    );
+  });
+
+  it("fills the budget tightly: keeping one more incident would overflow", async () => {
+    const { handler } = makeHandler(bigIncidentsResponse(100));
+    const result = await handler.callTool("rocketcyber_list_incidents", { pageSize: 100 });
+    const text = result.content[0].text;
+    const body = JSON.parse(text);
+    // Every incident serializes to the same length, so one more incident
+    // would add exactly (item + comma) characters.
+    const itemSize = JSON.stringify(body.data.data[0]).length;
+    expect(text.length + itemSize + 1).toBeGreaterThan(RESPONSE_BUDGET);
+  });
+
+  it("leaves server-page pagination metadata untouched when truncating", async () => {
+    const { handler } = makeHandler(bigIncidentsResponse(100));
+    const body = await callListIncidents(handler, { pageSize: 100 });
+    expect(body.data.totalCount).toBe(7900);
+    expect(body.data.dataCount).toBe(100);
+    expect(body.data.currentPage).toBe(1);
+    expect(body.data.totalPages).toBe(79);
+  });
+
+  it("keeps at least one incident even when a single incident exceeds the budget", async () => {
+    const huge = (id: number) => ({ id, title: "Huge", details: "y".repeat(45_000) });
+    const response = {
+      data: [huge(1), huge(2), huge(3)],
+      totalCount: 3,
+      currentPage: 1,
+      totalPages: 1,
+    };
+    const { handler } = makeHandler(response);
+    const body = await callListIncidents(handler, {});
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0].id).toBe(1);
+    expect(body.message).toBe(
+      "Retrieved incidents (showing 1 of 3 fetched on page 1 of 1; " +
+        "response size cap — lower pageSize and use page to paginate)"
+    );
+  });
+
+  it("verbose mode is unaffected byte-for-byte even when over budget", async () => {
+    const response = bigIncidentsResponse(100);
+    const { handler } = makeHandler(response);
+    const result = await handler.callTool("rocketcyber_list_incidents", { verbose: true, pageSize: 100 });
+    expect(result.content[0].text).toBe(
+      JSON.stringify({
+        message: "Retrieved incidents (100 results, page 1 of 79)",
+        data: response,
+      })
+    );
+  });
+
+  it("documents the size cap in the tool description", async () => {
+    const { TOOL_DEFINITIONS } = await import("../handlers/tool.definitions.js");
+    const tool = TOOL_DEFINITIONS.find((t) => t.name === "rocketcyber_list_incidents")!;
+    expect(tool.description).toMatch(/size cap|capped/i);
+    expect(tool.description).toMatch(/page/i);
+  });
+});
+
 describe("rocketcyber_list_incidents verbose stripping", () => {
   it("strips verbose from the service call arguments", async () => {
     const { handler, listIncidents } = makeHandler(incidentsResponse());
